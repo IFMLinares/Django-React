@@ -16,7 +16,6 @@ class Plan(models.Model):
         verbose_name = "Plan"
         verbose_name_plural = "Planes"
 
-
 class Membership(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='memberships')
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='memberships')
