@@ -35,13 +35,30 @@ export function TanstackTable<T extends object>({
     cellClassName = "text-gray-800 dark:text-gray-200",
 }: TanstackTableProps<T>) {
     const [globalFilter, setGlobalFilter] = React.useState("");
+    const [pageSize, setPageSize] = React.useState(10);
+    const [pageIndex, setPageIndex] = React.useState(0);
+
     const table = useReactTable({
         data,
         columns,
         state: {
             globalFilter,
+            pagination: {
+                pageIndex,
+                pageSize,
+            },
         },
         onGlobalFilterChange: setGlobalFilter,
+        onPaginationChange: updater => {
+            if (typeof updater === "function") {
+                const newState = updater({ pageIndex, pageSize });
+                setPageIndex(newState.pageIndex);
+                setPageSize(newState.pageSize);
+            } else if (updater && typeof updater === "object") {
+                if ("pageIndex" in updater) setPageIndex(updater.pageIndex);
+                if ("pageSize" in updater) setPageSize(updater.pageSize);
+            }
+        },
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -54,19 +71,31 @@ export function TanstackTable<T extends object>({
                 {title && (
                     <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{title}</h2>
                 )}
-                <input
-                    value={globalFilter ?? ""}
-                    onChange={e => setGlobalFilter(e.target.value)}
-                    placeholder={globalFilterPlaceholder}
-                    className="px-3 py-2 border rounded-md text-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring focus:ring-primary-500"
-                />
+                <div className="flex flex-col md:flex-row gap-2 items-center">
+                    <input
+                        value={globalFilter ?? ""}
+                        onChange={e => setGlobalFilter(e.target.value)}
+                        placeholder={globalFilterPlaceholder}
+                        className="px-3 py-2 border rounded-md text-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring focus:ring-primary-500"
+                    />
+                    <label className="text-xs text-gray-600 dark:text-gray-400 ml-2">Items por página:</label>
+                    <select
+                        value={pageSize}
+                        onChange={e => setPageSize(Number(e.target.value))}
+                        className="px-2 py-1 border rounded text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600"
+                    >
+                        {[5, 10, 20, 50, 100].map((size: number) => (
+                            <option key={size} value={size}>{size}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-100 dark:bg-gray-800">
-                        {table.getHeaderGroups().map(headerGroup => (
+                        {table.getHeaderGroups().map((headerGroup: any) => (
                             <tr key={headerGroup.id}>
-                                {headerGroup.headers.map(header => {
+                                {headerGroup.headers.map((header: any) => {
                                     // Permite pasar extra clases por columnDef.headerClassName
                                     const meta = header.column.columnDef.meta as TableColumnMeta | undefined;
                                     const extraHeaderClass = meta?.headerClassName || "";
@@ -83,9 +112,9 @@ export function TanstackTable<T extends object>({
                         ))}
                     </thead>
                     <tbody className="bg-white dark:bg-gray-900">
-                        {table.getRowModel().rows.map(row => (
+                        {table.getRowModel().rows.map((row: any) => (
                             <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                {row.getVisibleCells().map(cell => {
+                                {row.getVisibleCells().map((cell: any) => {
                                     // Permite pasar extra clases por columnDef.cellClassName
                                     const meta = cell.column.columnDef.meta as TableColumnMeta | undefined;
                                     const extraCellClass = meta?.cellClassName || "";
