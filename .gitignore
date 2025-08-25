@@ -1,0 +1,8 @@
+env/
+velzonreact/
+node_modules/
+migrations/
+*.pyc
+*.sqlite3
+*.env
+Django/media/
