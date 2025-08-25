@@ -4,14 +4,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from ...models import Product
-from ..serializers.serializers_create import ProductCreateSerializer
+from ..serializers.serializer_view import ProductDetailSerializer
 
 from rest_framework.permissions import IsAuthenticated
 from ...models import Business
 
 @extend_schema(
 	responses={
-		200: ProductCreateSerializer,
+		200: ProductDetailSerializer,
 		404: OpenApiResponse(description="Producto no encontrado."),
 		403: OpenApiResponse(description="No autorizado."),
 	},
@@ -35,5 +35,5 @@ class ProductDetailView(APIView):
 		if product.business_id != business_obj.id:
 			return Response({"error": "No autorizado para ver este producto."}, status=status.HTTP_403_FORBIDDEN)
 
-		serializer = ProductCreateSerializer(product)
+		serializer = ProductDetailSerializer(product, context={'request': request})
 		return Response(serializer.data, status=status.HTTP_200_OK)

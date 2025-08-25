@@ -21,6 +21,7 @@ const LIST_PRODUCTS_URL = `${BASE_URL}business/products/business/`;
 const CREATE_PRODUCT_URL = `${BASE_URL}business/products/register/`;
 const LIST_ATTRIBUTES_NAMES_URL = `${BASE_URL}business/products/attribute-names/`;
 const CREATE_ATTRIBUTE_NAME_URL = `${BASE_URL}business/products/attribute-names/create/`;
+const GET_DETAIL_PRODUCT_URL = `${BASE_URL}business/products/detail/`;
 
 /**
  * Inicia sesión con usuario y contraseña.
@@ -203,6 +204,12 @@ export const getUnitsProduct = async (): Promise<any> => {
     const response = await axiosInstance.get(GET_UNITS_PRODUCT_URL);
     return response.data;
 }
+
+export const getDetailProduct = async (product_id: number): Promise<any> => {
+    const response = await axiosInstance.get(`${GET_DETAIL_PRODUCT_URL}${product_id}/`);
+    return response.data;
+}
+
 
 /**
  * Interceptor global para refrescar el token automáticamente en cualquier petición que reciba un 401.
