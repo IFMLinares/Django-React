@@ -81,7 +81,7 @@ WSGI_APPLICATION = 'settings.wsgi.application'
 #     }
 # }
 
-DATABASES = db.SQLITE
+DATABASES = db.DATABASES
 
 
 
