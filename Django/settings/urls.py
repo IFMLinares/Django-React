@@ -12,6 +12,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('API.user.urls')),
     path('api/business/', include('API.products.urls')),
+    path('api/sales/', include('API.sale.urls')),
 ]
 
 # Servir archivos de media en desarrollo
