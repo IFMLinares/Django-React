@@ -23,6 +23,7 @@ export type TanstackTableProps<T extends object> = {
     className?: string;
     headerClassName?: string;
     cellClassName?: string;
+    meta?: any;
 };
 
 export function TanstackTable<T extends object>({
@@ -33,6 +34,7 @@ export function TanstackTable<T extends object>({
     className = "",
     headerClassName = "font-semibold",
     cellClassName = "text-gray-800 dark:text-gray-200",
+    meta,
 }: TanstackTableProps<T>) {
     const [globalFilter, setGlobalFilter] = React.useState("");
     const [pageSize, setPageSize] = React.useState(10);
@@ -63,6 +65,7 @@ export function TanstackTable<T extends object>({
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         debugTable: false,
+        meta,
     });
 
     return (

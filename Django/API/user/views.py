@@ -56,8 +56,8 @@ class LoginView(TokenObtainPairView):
                 path='/api/',
             )
             return res
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({'error': 'Credenciales inválidas. Intenta nuevamente.'}, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(
     responses={200: OpenApiExample('Logout ok', value={"message": "Logout exitoso"})},
@@ -68,8 +68,9 @@ class LogoutCookieView(APIView):
         try:
             res = Response()
             res.data = {'success': True}
-            res.delete_cookie('access_token', path='/api/auth/', samesite=None)
-            res.delete_cookie('refresh_token', path='/api/auth/', samesite=None)
+            # Usar el mismo path que en el login
+            res.delete_cookie('access_token', path='/api/', samesite=None)
+            res.delete_cookie('refresh_token', path='/api/', samesite=None)
             return res
         except Exception:
             return Response({'success': False})

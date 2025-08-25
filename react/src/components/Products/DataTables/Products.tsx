@@ -1,7 +1,7 @@
-
-// Tipo para producto real
 import { ColumnDef } from "@tanstack/react-table";
 import { TanstackTable } from "../../tables/Tanstack/table";
+import { useNavigate } from "react-router-dom";
+import Badge from "../../ui/badge/Badge";
 
 type Product = {
     id: number;
@@ -79,10 +79,27 @@ const columns: ProductColumn[] = [
         meta: {
             cellClassName: "text-gray-400 dark:text-gray-500"
         }
-    },
+    }, {
+        id: "acciones",
+        header: () => <span>Acciones</span>,
+        cell: (info: any) => {
+            const row = info.row.original;
+            const navigate = info.table.options.meta?.navigate;
+            return (
+                <div className="flex gap-2">
+                    <span onClick={() => navigate(`/products/${row.id}`)} style={{ cursor: 'pointer' }}>
+                        <Badge variant="solid" color="info">
+                            Ver
+                        </Badge>
+                    </span>
+                </div>
+            );
+        },
+    }
 ];
 
 export default function ProductsDataTables({ data }: ProductsDataTablesProps) {
+    const navigate = useNavigate();
     return (
         <TanstackTable
             columns={columns}
@@ -91,6 +108,7 @@ export default function ProductsDataTables({ data }: ProductsDataTablesProps) {
             globalFilterPlaceholder="Buscar..."
             headerClassName="font-semibold"
             cellClassName="text-gray-800 dark:text-gray-200"
+            meta={{ navigate }}
         />
     );
 }

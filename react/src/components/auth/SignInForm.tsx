@@ -14,6 +14,7 @@ import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
 import LoaderModal from "../ui/modal/loaderModal";
+import Alert from "../ui/alert/Alert";
 
 
 export default function SignInForm() {
@@ -24,6 +25,7 @@ export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { setUser } = useUser();
@@ -31,11 +33,20 @@ export default function SignInForm() {
   // Ahora recibimos los datos validados del formulario
   const handleLogin = async (data: { username: string; password: string }) => {
     setIsLoading(true);
+    setErrorMsg(null);
     try {
       const success = await login(data.username, data.password);
       if (success) {
         setUser(await import("../../endpoints/api").then(mod => mod.getMe()));
         navigate("/");
+      } else {
+        setErrorMsg("Credenciales inválidas. Intenta nuevamente.");
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 400) {
+        setErrorMsg(error?.response?.data?.error || "Credenciales inválidas. Intenta nuevamente.");
+      } else {
+        setErrorMsg("Error de conexión o inesperado. Intenta nuevamente.");
       }
     } finally {
       setIsLoading(false);
@@ -163,6 +174,16 @@ export default function SignInForm() {
                       </p>
                     )}
                   </div>
+                  {errorMsg && (
+                    <div className="mb-4">
+                      <Alert
+                        variant="error"
+                        title="Error de inicio de sesión"
+                        message={errorMsg}
+                        showLink={false}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Checkbox checked={isChecked} onChange={setIsChecked} />
