@@ -3,6 +3,8 @@ from .views.list import *
 from .views.create import ProductRegisterView
 from .views.attributename import AttributeNameListView, AttributeNameCreateView
 from .views.unidad_medida import UnidadMedidaListView
+from .views.detail import ProductDetailView
+from .views.update import ProductUpdateView
 
 urlpatterns = [
     path('business/<int:business_id>/', ProductsByBusinessView.as_view(), name='business-products'),
@@ -10,4 +12,10 @@ urlpatterns = [
     path('attribute-names/', AttributeNameListView.as_view(), name='attribute-names-list'),
     path('attribute-names/create/', AttributeNameCreateView.as_view(), name='attribute-names-create'),
     path('unidad-medida/', UnidadMedidaListView.as_view(), name='unidad-medida-list'),
+
+    # Detalle de producto
+    path('detail/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
+
+    # Actualizar producto
+    path('update/<int:pk>/', ProductUpdateView.as_view(), name='product-update'),
 ]
