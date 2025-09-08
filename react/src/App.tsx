@@ -23,6 +23,7 @@ import Stock from "./pages/Dashboard/Stock";
 import BusinessTable from "./pages/Business/Business";
 import ProductsTables from "./pages/Products/Products";
 import FormProductAdd from "./pages/Products/AddProduct";
+import EditProduct from "./pages/Products/EditProduct";
 import DetailProductPage from "./pages/Products/DetailProduct";
 import { UserProvider } from "./context/UserContext";
 
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/products" element={<ProductsTables />} />
               <Route path="/products/new" element={<FormProductAdd />} />
               <Route path="/products/:id" element={<DetailProductPage />} />
+              <Route path="/products/edit/:id" element={<EditProduct />} />
               {/* Dashboard */}
               {/* ---------------------------------- */}
               <Route index path="/" element={<Home />} />

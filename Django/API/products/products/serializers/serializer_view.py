@@ -52,8 +52,8 @@ class InventoryVariantDetailSerializer(serializers.ModelSerializer):
 		fields = ['cantidad', 'stock_minimo']
 
 class ProductVariantDetailSerializer(serializers.ModelSerializer):
-	variant_attributes = VariantAttributeDetailSerializer(many=True, source='variant_attributes')
-	inventario_variante = InventoryVariantDetailSerializer(source='inventario_variante', read_only=True)
+	variant_attributes = VariantAttributeDetailSerializer(many=True)
+	inventario_variante = InventoryVariantDetailSerializer(read_only=True)
 
 	class Meta:
 		model = ProductVariant

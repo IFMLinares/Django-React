@@ -27,6 +27,53 @@ class ProductImageCreateSerializer(serializers.ModelSerializer):
         fields = ['imagen']
 
 class ProductCreateSerializer(serializers.ModelSerializer):
+    def update(self, instance, validated_data):
+        # Actualiza campos simples
+        instance.name = validated_data.get('name', instance.name)
+        instance.price_base = validated_data.get('price_base', instance.price_base)
+        instance.descripcion = validated_data.get('descripcion', instance.descripcion)
+        instance.save()
+
+        # Actualiza inventario
+        inventario_data = validated_data.get('inventario')
+        if inventario_data:
+            if hasattr(instance, 'inventario'):
+                for attr, value in inventario_data.items():
+                    setattr(instance.inventario, attr, value)
+                instance.inventario.save()
+            else:
+                Inventory.objects.create(product=instance, **inventario_data)
+
+        # Actualiza atributos
+        attributes_data = validated_data.get('attributes')
+        if attributes_data is not None:
+            instance.attributes.all().delete()
+            for attr in attributes_data:
+                # Si Attribute.name es FK a AttributeName
+                if hasattr(Attribute, 'name') and isinstance(Attribute._meta.get_field('name'), models.ForeignKey):
+                    attr_name_obj, _ = AttributeName.objects.get_or_create(name=attr['name'])
+                    Attribute.objects.create(product=instance, name=attr_name_obj, value=attr['value'])
+                else:
+                    Attribute.objects.create(product=instance, **attr)
+
+        # Actualiza variantes
+        variants_data = validated_data.get('variants')
+        if variants_data is not None:
+            instance.variants.all().delete()
+            for variant_data in variants_data:
+                attributes = variant_data.pop('attributes', [])
+                cantidad = variant_data.get('cantidad', 0)
+                stock_minimo = variant_data.get('stock_minimo', 0)
+                variant = ProductVariant.objects.create(product=instance)
+                for attr in attributes:
+                    if hasattr(VariantAttribute, 'name') and isinstance(VariantAttribute._meta.get_field('name'), models.ForeignKey):
+                        attr_name_obj, _ = AttributeName.objects.get_or_create(name=attr['name'])
+                        VariantAttribute.objects.create(variant=variant, name=attr_name_obj, value=attr['value'])
+                    else:
+                        VariantAttribute.objects.create(variant=variant, name=attr['name'], value=attr['value'])
+                InventoryVariant.objects.create(variant=variant, cantidad=cantidad, stock_minimo=stock_minimo)
+
+        return instance
     attributes = AttributeCreateSerializer(many=True)
     inventario = InventoryCreateSerializer()
     images = ProductImageCreateSerializer(many=True, required=False)

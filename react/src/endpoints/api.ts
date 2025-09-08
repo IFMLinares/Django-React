@@ -22,6 +22,7 @@ const CREATE_PRODUCT_URL = `${BASE_URL}business/products/register/`;
 const LIST_ATTRIBUTES_NAMES_URL = `${BASE_URL}business/products/attribute-names/`;
 const CREATE_ATTRIBUTE_NAME_URL = `${BASE_URL}business/products/attribute-names/create/`;
 const GET_DETAIL_PRODUCT_URL = `${BASE_URL}business/products/detail/`;
+const UPDATE_PRODUCT_URL = `${BASE_URL}business/products/update/`;
 
 /**
  * Inicia sesión con usuario y contraseña.
@@ -207,6 +208,11 @@ export const getUnitsProduct = async (): Promise<any> => {
 
 export const getDetailProduct = async (product_id: number): Promise<any> => {
     const response = await axiosInstance.get(`${GET_DETAIL_PRODUCT_URL}${product_id}/`);
+    return response.data;
+}
+
+export const updateProduct = async (product_id: number, data: any): Promise<any> => {
+    const response = await axiosInstance.put(`${UPDATE_PRODUCT_URL}${product_id}/`, data);
     return response.data;
 }
 

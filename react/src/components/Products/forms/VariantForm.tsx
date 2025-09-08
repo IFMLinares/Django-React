@@ -106,6 +106,14 @@ const VariantForm: React.FC<VariantFormProps> = ({ register, errors, variants, s
                             <Input
                                 type="number"
                                 {...register(`variants.${vIdx}.cantidad`)}
+                                value={variant.cantidad}
+                                onChange={e => {
+                                    const value = e.target.value;
+                                    const newVariants = [...variants];
+                                    newVariants[vIdx].cantidad = value === "" ? 0 : Number(value);
+                                    setVariants(newVariants);
+                                    setValue("variants", newVariants);
+                                }}
                                 placeholder="Cantidad de la variante"
                                 className="w-full"
                             />
@@ -115,6 +123,14 @@ const VariantForm: React.FC<VariantFormProps> = ({ register, errors, variants, s
                             <Input
                                 type="number"
                                 {...register(`variants.${vIdx}.stockMinimo`)}
+                                value={variant.stockMinimo}
+                                onChange={e => {
+                                    const value = e.target.value;
+                                    const newVariants = [...variants];
+                                    newVariants[vIdx].stockMinimo = value === "" ? 0 : Number(value);
+                                    setVariants(newVariants);
+                                    setValue("variants", newVariants);
+                                }}
                                 placeholder="Stock mínimo de la variante"
                                 className="w-full"
                             />
