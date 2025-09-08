@@ -2,6 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { TanstackTable } from "../../tables/Tanstack/table";
 import { useNavigate } from "react-router-dom";
 import Badge from "../../ui/badge/Badge";
+import { PencilLine, Eye } from 'lucide-react';
 
 type Product = {
     id: number;
@@ -87,9 +88,14 @@ const columns: ProductColumn[] = [
             const navigate = info.table.options.meta?.navigate;
             return (
                 <div className="flex gap-2">
-                    <span onClick={() => navigate(`/products/${row.id}`)} style={{ cursor: 'pointer' }}>
+                    <span onClick={() => navigate(`/products/${row.id}`)} style={{ cursor: 'pointer' }} title="Ver">
                         <Badge variant="solid" color="info">
-                            Ver
+                            <Eye className="size-5" />
+                        </Badge>
+                    </span>
+                    <span onClick={() => navigate(`/products/edit/${row.id}`)} style={{ cursor: 'pointer' }} title="Editar">
+                        <Badge variant="solid" color="success">
+                            <PencilLine className="size-5" />
                         </Badge>
                     </span>
                 </div>
