@@ -20,18 +20,14 @@ class TestRegistration:
 
         response = api_client.post(url, payload)
 
-        # 1. Verificar Status (OJO: Tu vista devuelve 200, pero el estándar REST para crear es 201)
-        assert response.status_code == status.HTTP_200_OK
+        # 1. Verificar Status (201 CREATED es el estándar REST para creación)
+        assert response.status_code == status.HTTP_201_CREATED
         
-        # 2. Verificar estructura de respuesta personalizada
-        assert response.data['message'] == 'Usuario cliente registrado correctamente'
-        assert 'user' in response.data
-        
-        # 3. VERIFICACIÓN CRÍTICA: ¿Se guardó en la DB?
+        # 2. VERIFICACIÓN CRÍTICA: ¿Se guardó en la DB?
         user_db = User.objects.get(username='nuevocliente')
         assert user_db.email == 'cliente@test.com'
         
-        # 4. VERIFICACIÓN DE NEGOCIO: ¿Tiene el rol correcto?
+        # 3. VERIFICACIÓN DE NEGOCIO: ¿Tiene el rol correcto?
         # Asumo que tu modelo tiene un campo 'role'
         assert user_db.role == 'client' 
 

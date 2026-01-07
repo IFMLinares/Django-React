@@ -2,12 +2,14 @@ from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.timezone import now, timedelta
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import User
 from .serializers import LoginSerializer, UserSerializer, RegisterClientSerializer
+from .services import set_auth_cookies, clear_auth_cookies
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView
@@ -28,33 +30,28 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 )
 class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        tokens = response.data
-
-        access_token = tokens['access']
-        refresh_token = tokens['refresh']
-        res = Response({
-        'success': True,
-                'access': access_token,
-            'refresh': refresh_token
-        })
-        res.set_cookie(
-            key='access_token',
-            value=access_token,
-            httponly=True,
-            secure=True,
-            samesite=None,
-            path='/api/',
-        )
-        res.set_cookie(
-            key='refresh_token',
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite=None,
-            path='/api/',
-        )
-        return res
+            # 1. Obtener la respuesta original de simplejwt
+            response = super().post(request, *args, **kwargs)
+            
+            # 2. Extraer tokens
+            tokens = response.data
+            
+            # 3. Reconstruir el cuerpo de la respuesta (si tu frontend lo exige así)
+            # Nota: Response.data es mutable, puedes modificarlo directamente
+            response.data = {
+                'success': True,
+                'access': tokens['access'],
+                'refresh': tokens['refresh']
+            }
+            
+            # 4. Inyectar cookies usando el servicio
+            set_auth_cookies(
+                response, 
+                tokens['access'], 
+                tokens['refresh']
+            )
+            
+            return response
 
 @extend_schema(
     responses={200: OpenApiExample('Logout ok', value={"message": "Logout exitoso"})},
@@ -62,15 +59,26 @@ class LoginView(TokenObtainPairView):
 )
 class LogoutCookieView(APIView):
     def post(self, request):
-        try:
-            res = Response()
-            res.data = {'success': True}
-            # Usar el mismo path que en el login
-            res.delete_cookie('access_token', path='/api/', samesite=None)
-            res.delete_cookie('refresh_token', path='/api/', samesite=None)
-            return res
-        except Exception:
-            return Response({'success': False})
+        # 1. Recuperar el refresh token de la cookie
+        refresh_token = request.COOKIES.get(settings.JWT_REFRESH_COOKIE)
+
+        if refresh_token:
+            # 2. Invalidación en el Servidor (Blacklist)
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist() # Esto marca el token como "muerto" en la DB
+            except TokenError:
+                # Si el token ya expiró o es inválido, no importa, 
+                # igual queremos hacer logout en el cliente.
+                pass
+        
+        # 3. Preparar respuesta
+        response = Response({'success': True, 'message': 'Sesión cerrada correctamente'})
+        
+        # 4. Limpieza en el Cliente (Cookies)
+        clear_auth_cookies(response)
+        
+        return response
 
 @extend_schema(
     request={

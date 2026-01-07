@@ -187,6 +187,13 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
+# Configuración de Cookies JWT
+JWT_AUTH_COOKIE = 'access_token'
+JWT_REFRESH_COOKIE = 'refresh_token'
+JWT_AUTH_SECURE = os.getenv('JWT_AUTH_SECURE', 'False') == 'True' # True en Prod, False en Dev
+JWT_AUTH_SAMESITE = 'Lax' if not JWT_AUTH_SECURE else 'None' 
+# 'Lax' es mejor para desarrollo local en el mismo dominio, 'None' para Cross-Origin en Prod
+
 # API Documentation Settings
 
 SPECTACULAR_SETTINGS = {
