@@ -28,36 +28,33 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 )
 class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        try:
-            response = super().post(request, *args, **kwargs)
-            tokens = response.data
+        response = super().post(request, *args, **kwargs)
+        tokens = response.data
 
-            access_token = tokens['access']
-            refresh_token = tokens['refresh']
-            res = Response({
-                'success': True,
+        access_token = tokens['access']
+        refresh_token = tokens['refresh']
+        res = Response({
+        'success': True,
                 'access': access_token,
-                'refresh': refresh_token
-            })
-            res.set_cookie(
-                key='access_token',
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite=None,
-                path='/api/',
-            )
-            res.set_cookie(
-                key='refresh_token',
-                value=refresh_token,
-                httponly=True,
-                secure=True,
-                samesite=None,
-                path='/api/',
-            )
-            return res
-        except Exception:
-            return Response({'error': 'Credenciales inválidas. Intenta nuevamente.'}, status=status.HTTP_400_BAD_REQUEST)
+            'refresh': refresh_token
+        })
+        res.set_cookie(
+            key='access_token',
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite=None,
+            path='/api/',
+        )
+        res.set_cookie(
+            key='refresh_token',
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite=None,
+            path='/api/',
+        )
+        return res
 
 @extend_schema(
     responses={200: OpenApiExample('Logout ok', value={"message": "Logout exitoso"})},
@@ -208,11 +205,6 @@ class ValidateResetCodeView(APIView):
     responses={200: UserSerializer},
     description="Registra un nuevo usuario con rol cliente. Solo los campos username, email y password son obligatorios. El resto son opcionales."
 )
-class RegisterClientView(APIView):
+class RegisterClientView(generics.CreateAPIView):
     permission_classes = [AllowAny]
-    def post(self, request):
-        serializer = RegisterClientSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response({'message': 'Usuario cliente registrado correctamente', 'user': UserSerializer(user).data})
-        return Response(serializer.errors, status=400)
+    serializer_class = RegisterClientSerializer

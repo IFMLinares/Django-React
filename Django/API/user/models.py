@@ -13,6 +13,7 @@ class User(AbstractUser):
     fecha_nacimiento = models.DateField(null=True, blank=True)
     reset_code = models.CharField(max_length=10, null=True, blank=True)
     reset_code_created_at = models.DateTimeField(null=True, blank=True)
+    email = models.EmailField(unique=True)
 
     # Additional fields for future use
     # location (Caracas, Venezuela)
