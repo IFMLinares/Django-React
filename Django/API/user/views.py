@@ -80,28 +80,6 @@ class LogoutCookieView(APIView):
         
         return response
 
-@extend_schema(
-    request={
-        "type": "object",
-        "properties": {
-            "refresh": {"type": "string", "description": "Refresh token JWT"}
-        },
-        "required": ["refresh"]
-    },
-    responses={200: OpenApiExample('Logout ok', value={"message": "Logout exitoso"})},
-    description="Invalida el refresh token JWT del usuario autenticado."
-)
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self, request):
-        try:
-            refresh_token = request.data.get('refresh')
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'message': 'Logout exitoso'})
-        except Exception:
-            return Response({'error': 'Token inválido o ya fue deshabilitado'}, status=400)
-
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         try:
