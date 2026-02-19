@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from ...models import Business, AttributeName
 from ..serializers.serializers_create import ProductCreateSerializer
+from ...services import ProductService
 
 @extend_schema(
     request=ProductCreateSerializer,
@@ -18,32 +19,24 @@ from ..serializers.serializers_create import ProductCreateSerializer
 class ProductRegisterView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        print("Datos recibidos:", request.data)
+    def post(self, request):
         try:
-            data = request.data.copy()
-            # Buscar el negocio del usuario autenticado
+            business = Business.objects.get(user=request.user)
+        except Business.DoesNotExist:
+            return Response({"error": "Usuario sin negocio."}, status=403)
+
+        serializer = ProductCreateSerializer(data=request.data)
+        if serializer.is_valid():
             try:
-                business_obj = Business.objects.get(user=request.user)
-                data['business'] = business_obj.id
-            except Business.DoesNotExist:
-                return Response({"error": "El usuario no tiene un negocio asociado."}, status=status.HTTP_400_BAD_REQUEST)
+                # El servicio ahora orquesta TODO
+                product = ProductService.create_product_with_details(
+                    business=business, 
+                    data=serializer.validated_data
+                )
+                return Response({"success": True, "product_id": product.id}, status=201)
+            except Exception as e:
+                # Capturamos errores de lógica de negocio o base de datos
+                return Response({"error": str(e)}, status=400)
+        
+        return Response(serializer.errors, status=400)
 
-            # Convertir 'name' de cada atributo a su id
-            if 'attributes' in data:
-                for attr in data['attributes']:
-                    if isinstance(attr.get('name'), str):
-                        try:
-                            attr_name_obj = AttributeName.objects.get(name=attr['name'])
-                            attr['name'] = attr_name_obj.id
-                        except AttributeName.DoesNotExist:
-                            return Response({"error": f"El atributo '{attr['name']}' no existe."}, status=status.HTTP_400_BAD_REQUEST)
-
-            serializer = ProductCreateSerializer(data=data)
-            if serializer.is_valid():
-                product = serializer.save()
-                return Response({"success": True, "product_id": product.id}, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print("Error al crear el producto:", str(e))
-            return Response({"error": "Error al crear el producto"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
