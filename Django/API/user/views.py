@@ -1,20 +1,21 @@
-from rest_framework.views import APIView
+from django.conf import settings
+from django.core.mail import send_mail
+from django.utils.timezone import now, timedelta
+
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiTypes, OpenApiResponse
+
 from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
+
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.utils.timezone import now, timedelta
-from django.core.mail import send_mail
-from django.conf import settings
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 from .models import User
-from .serializers import LoginSerializer, UserSerializer, RegisterClientSerializer
-from .services import set_auth_cookies, clear_auth_cookies
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView
-)
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from .serializers import LoginSerializer, RegisterClientSerializer, UserSerializer
+from .services import clear_auth_cookies, set_auth_cookies, UserAuthService
 
 @extend_schema(
     request=LoginSerializer,
@@ -30,28 +31,25 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 )
 class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-            # 1. Obtener la respuesta original de simplejwt
-            response = super().post(request, *args, **kwargs)
+            try:
+                response = super().post(request, *args, **kwargs)
+                tokens = response.data
+                response.data = {
+                    'success': True,
+                    'access': tokens['access'],
+                    'refresh': tokens['refresh']
+                }
+                
+                # 4. Inyectar cookies usando el servicio
+                set_auth_cookies(
+                    response, 
+                    tokens['access'], 
+                    tokens['refresh']
+                )
             
-            # 2. Extraer tokens
-            tokens = response.data
-            
-            # 3. Reconstruir el cuerpo de la respuesta (si tu frontend lo exige así)
-            # Nota: Response.data es mutable, puedes modificarlo directamente
-            response.data = {
-                'success': True,
-                'access': tokens['access'],
-                'refresh': tokens['refresh']
-            }
-            
-            # 4. Inyectar cookies usando el servicio
-            set_auth_cookies(
-                response, 
-                tokens['access'], 
-                tokens['refresh']
-            )
-            
-            return response
+                return response
+            except Exception as e:
+                return Response({'success': False, 'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
 @extend_schema(
     responses={200: OpenApiExample('Logout ok', value={"message": "Logout exitoso"})},
@@ -80,10 +78,29 @@ class LogoutCookieView(APIView):
         
         return response
 
+@extend_schema(
+    summary="Refrescar Access Token vía Cookies",
+    description="Extrae el refresh token de las cookies, genera un nuevo access token y actualiza las cookies del navegador.",
+    request=None, # No requiere cuerpo porque el refresh token está en la cookie
+    responses={
+        200: OpenApiResponse(
+            description="Token refrescado exitosamente",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    'Refresh OK',
+                    value={'refreshed': True, 'access': 'eyJhbGci...'}
+                )
+            ]
+        ),
+        401: OpenApiResponse(description="Token de refresco inválido o expirado")
+    },
+    tags=['Autenticación']
+)
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         try:
-            refresh_token = request.COOKIES.get('refresh_token')
+            refresh_token = request.COOKIES.get(settings.JWT_REFRESH_COOKIE)
             request.data['refresh'] = refresh_token
 
             response = super().post(request, *args, **kwargs)
@@ -94,15 +111,7 @@ class CustomTokenRefreshView(TokenRefreshView):
                 'refreshed': True,
                 'access': access_token
             })
-            res.set_cookie(
-                key='access_token',
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite=None,
-                path='/api/',
-            )
-            return res
+            return set_auth_cookies(res, access_token, refresh_token)
 
         except:
             return Response({'refreshed': False})
@@ -133,23 +142,14 @@ class SendResetCodeView(APIView):
     def post(self, request):
         email = request.data.get('email')
         if not email:
-            return Response({'error': 'Email requerido'}, status=400)
-        try:
-            user = User.objects.get(email=email)
-            import random
-            reset_code = random.randint(100000, 999999)
-            user.reset_code = reset_code
-            user.reset_code_created_at = now()
-            user.save()
-            send_mail(
-                'Código de restablecimiento',
-                f'Tu código es: {reset_code}',
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-            )
-            return Response({'message': 'Código enviado al email'})
-        except User.DoesNotExist:
-            return Response({'error': 'No existe usuario con ese email'}, status=404)
+            return Response({'error': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Llamada al servicio
+        success, message = UserAuthService.send_password_reset_code(email)
+        
+        if success:
+            return Response({'message': message}, status=status.HTTP_200_OK)
+        return Response({'error': message}, status=status.HTTP_404_NOT_FOUND)
 
 @extend_schema(
     request={
@@ -167,24 +167,20 @@ class SendResetCodeView(APIView):
 class ValidateResetCodeView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
-        email = request.data.get('email')
-        reset_code = request.data.get('reset_code')
-        new_password = request.data.get('new_password')
+        data = request.data
+        email = data.get('email')
+        reset_code = data.get('reset_code')
+        new_password = data.get('new_password')
+
         if not all([email, reset_code, new_password]):
-            return Response({'error': 'Email, código y nueva contraseña requeridos'}, status=400)
-        try:
-            user = User.objects.get(email=email)
-            if str(user.reset_code) != str(reset_code):
-                return Response({'error': 'Código incorrecto'}, status=400)
-            if now() > user.reset_code_created_at + timedelta(minutes=10):
-                return Response({'error': 'Código expirado'}, status=400)
-            user.set_password(new_password)
-            user.reset_code = None
-            user.reset_code_created_at = None
-            user.save()
-            return Response({'message': 'Contraseña cambiada correctamente'})
-        except User.DoesNotExist:
-            return Response({'error': 'No existe usuario con ese email'}, status=404)
+            return Response({'error': 'Todos los campos son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Llamada al servicio
+        success, message = UserAuthService.validate_and_reset_password(email, reset_code, new_password)
+        
+        if success:
+            return Response({'message': message}, status=status.HTTP_200_OK)
+        return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(
     request=RegisterClientSerializer,
@@ -194,3 +190,7 @@ class ValidateResetCodeView(APIView):
 class RegisterClientView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegisterClientSerializer
+
+    def perform_create(self, serializer):
+        # Usamos el servicio para crear el usuario
+        UserAuthService.register_user(serializer)
