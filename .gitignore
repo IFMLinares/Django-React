@@ -7,3 +7,4 @@ migrations/
 *.env
 Django/media/
 .vscode/
+.github/
